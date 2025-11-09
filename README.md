@@ -18,8 +18,8 @@ Supports both contacted and contactless smart card readers.
 ## on Linux
 
 ```
-apt-get install libpcsclite1 libpcsclite1-dev python python-virtualenv
-virtualenv -p python3 ve
+apt-get install libpcsclite1 libpcsclite-dev python
+python -m venv ve
 source ve/bin/activate
 pip install -r requirements.txt
 ```
@@ -43,7 +43,9 @@ Two scripts are available at the moment:
 
 # Credits
 
-Initial research project was performed by Tania Marting <tania.martin@uclouvain.be> and Jean-Pierre Szikora <jean-pierre.Szikora@uclouvain.be> from UCL GIS. All credits goes to them for their amazing work with this :)
+Initial research project was performed by Tania Marting <tania.martin@uclouvain.be> and Jean-Pierre Szikora <jean-pierre.Szikora@uclouvain.be> from UCL GIS. All credits goes to them for their amazing work with this :) 
+
+This repo is a fork of [qkaiser/mobib-extractor](https://github.com/qkaiser/mobib-extractor), hoping to continue keeping this usable in 2025.
 
 # Original License
 
