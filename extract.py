@@ -14,6 +14,7 @@
 """
 
 import sys
+from pathlib import Path
 import datetime
 import string
 import csv
@@ -22,6 +23,12 @@ from smartcard.util import toHexString, toBytes
 from smartcard.Exceptions import NoCardException
 import matplotlib.pyplot as plt
 import mplleaflet
+import argparse
+import json
+
+parser = argparse.ArgumentParser("mobib-extract")
+parser.add_argument("--dump", type=str, default=None, help="Dump the read raw data to this JSON file")
+parser.add_argument("--load", type=str, default=None, help="Read the raw data from a JSON file instead of the card")
 
 def hex_to_bin(h):
     """Hexadecimal to binary
@@ -347,12 +354,13 @@ def analyze_logs(raw_logs):
         if coordx[i] != "-":
             plt.plot(float(coordy[i]), float(coordx[i]), 'rs')
             plt.plot(float(coordy[i]), float(coordx[i]), 'b')
-    mplleaflet.show()
+    #mplleaflet.show()
 
-def main():
+def read_card():
+    """Read salient raw data from the Mobib card in any connected card read.
     """
-    I'm the main function :o
-    """
+    raw_data = {}
+
     connected_readers = readers()
     if len(connected_readers) == 0:
         print("[!] No reader detected")
@@ -387,31 +395,34 @@ def main():
     s = "00 B2 01 3C 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
-    raw_envholder = toHexString(data).split(' ')
+    raw_data["envholder"] = toHexString(data)
 
     s = "00 B2 01 CC 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
     print(toHexString(data))
-    raw_counter = toHexString(data).split(' ')
+    raw_data["counter"] = toHexString(data)
+
+
     raw_logs = []
     # EvLog1
     s = "00 B2 01 BC 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
-    raw_logs.append(toHexString(data).split(' '))
+    raw_logs.append(toHexString(data))
 
     # EvLog2
     s = "00 B2 02 BC 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
-    raw_logs.append(toHexString(data).split(' '))
+    raw_logs.append(toHexString(data))
 
     # EvLog3
     s = "00 B2 03 BC 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
-    raw_logs.append(toHexString(data).split(' '))
+    raw_logs.append(toHexString(data))
+    raw_data["logs"] = raw_logs
 
     s = "00 A4 04 00 0B A0 00 00 02 91 D0 56 00 01 90 01"
     select_command = toBytes(s)
@@ -419,19 +430,54 @@ def main():
     s = "00 B2 01 E4 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
-    raw_holder1 = toHexString(data).split(' ')
+    raw_data["holder1"] = toHexString(data)
 
     s = "00 B2 02 E4 1D"
     select_command = toBytes(s)
     data, sw1, sw2 = connection.transmit(select_command)
-    raw_holder2 = toHexString(data).split(' ')
+    raw_data["holder2"] = toHexString(data)
 
-    analyze_holder(raw_holder1, raw_holder2)
+    return raw_data
+
+def split(raw_data):
+    """Turn the format of toHexString into a list of bytes in hexadecimal for the analyse_... functions.
+    """
+    out = {}
+    for k,v in raw_data.items():
+        if type(v) is list:
+            out[k] = [_v.split(' ') for _v in v]
+        else:
+            out[k] = v.split(' ')
+    return out
+
+def main(args):
+    """
+    I'm the main function :o
+    """
+    # Handle input/output: from card, from dump, to dump.
+    if args.load is None:
+        raw_data = read_card()
+        if args.dump is not None:
+            with open(args.dump, "w") as f:
+                json.dump(raw_data, f, indent=4)
+    else:
+        with open(args.load) as f:
+            raw_data = json.load(f)
+
+    # To analyse, split hexadecimal representation
+    raw_data = split(raw_data)
+
+    # Extract info and prepare a pretty summary
+    analyze_holder(raw_data["holder1"], raw_data["holder2"])
     # if not basic card
-    if len(raw_envholder) > 1:
-        analyze_envholder(raw_envholder)
-    analyze_counter(raw_counter)
-    analyze_logs(raw_logs)
+    if len(raw_data["envholder"]) > 1:
+        analyze_envholder(raw_data["envholder"])
+    analyze_counter(raw_data["counter"])
+    analyze_logs(raw_data["logs"])
 
 if __name__ == "__main__":
-    main()
+    args = parser.parse_args()
+    if args.dump is not None:
+        dump = Path(args.dump)
+        dump.parent.mkdir(exist_ok=True)
+    main(args)
