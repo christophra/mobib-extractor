@@ -96,10 +96,7 @@ def analyze_holder(raw_holder1, raw_holder2):
     ## Name
 
     ## Card number
-    hexa_card = ''
-    for i in range(2, 12):
-        hexa_card = hexa_card + raw_holder1[i]
-    hexa_card = hexa_card + raw_holder1[12][0]
+    hexa_card = ''.join(raw_holder1[2:13])[:-1]
 
     num_card = bin_to_number_dec(hex_to_bin(hexa_card), 2) # offset = 2
     print("\033[1mCard number:\033[0m {}".format(num_card))
@@ -114,14 +111,8 @@ def analyze_holder(raw_holder1, raw_holder2):
         gender = None
 
     if gender is not None:
-        hexa_name = raw_holder1[25][1]
-        for i in range(26, 29):
-            hexa_name = hexa_name + raw_holder1[i]
-        for a in raw_holder2:
-            hexa_name = hexa_name + a
-        bin_name = ''
-        for i in range(0, len(hex_to_bin(hexa_name))):
-            bin_name = bin_name + hex_to_bin(hexa_name)[i]
+        hexa_name = ''.join(raw_holder1[25:29])[1:] + ''.join(raw_holder2)
+        bin_name = hex_to_bin(hexa_name)
         name = bin_to_alphabet(bin_name, 1) # offset = 1
 
         print("\033[1mName:\033[0m {} {}".format(gender, name))
@@ -178,12 +169,12 @@ def analyze_log(raw_log):
     ## Card total validations counter
     hexa_cp_total_log = raw_log[17] + raw_log[18] + raw_log[19] + raw_log[20][0]
     r = hex_to_bin(hexa_cp_total_log)
-    cp_total_log = bin_to_number(r[3:len(r)-2])
+    cp_total_log = bin_to_number(r[3:-2])
 
     ## Travel connection counter
     hexa_cp_corresp_log = raw_log[20] + raw_log[21] + raw_log[22] + raw_log[23][0]
     r = hex_to_bin(hexa_cp_corresp_log)
-    cp_corresp_log = bin_to_number(r[3:len(r)-2])
+    cp_corresp_log = bin_to_number(r[3:-2])
 
     ## Card validation date
     hexa_date_valid = raw_log[0][1] + raw_log[1] + raw_log[2][0]
@@ -192,7 +183,7 @@ def analyze_log(raw_log):
     date_valid = find_date(
         int(
             bin_to_number(
-                tmp_datev_bin[2:len(tmp_datev_bin)]
+                tmp_datev_bin[2:]
             )
         )
     )
@@ -200,18 +191,18 @@ def analyze_log(raw_log):
     ## Card validation date of the first transit travel
     hexa_date_transit = raw_log[23] + raw_log[24]
     tmp_datet_bin = hex_to_bin(hexa_date_transit)
-    date_transit = find_date(int(bin_to_number(tmp_datet_bin[2:len(tmp_datet_bin)])))
+    date_transit = find_date(int(bin_to_number(tmp_datet_bin[2:])))
 
     ## Card validation hour
     hexa_heure_valid = raw_log[2][1] + raw_log[3]
 
     tmp_heurev_bin = hex_to_bin(hexa_heure_valid)
-    heure_valid = find_hour(int(bin_to_number(tmp_heurev_bin[0:len(tmp_heurev_bin)-1])))
+    heure_valid = find_hour(int(bin_to_number(tmp_heurev_bin[:-1])))
 
     ## Card validation hour of the first transit travel
     hexa_heure_transit = raw_log[25] + raw_log[26][0]
     tmp_heuret_bin = hex_to_bin(hexa_heure_transit)
-    heure_transit = find_hour(int(bin_to_number(tmp_heuret_bin[0:len(tmp_heuret_bin)-1])))
+    heure_transit = find_hour(int(bin_to_number(tmp_heuret_bin[-1])))
 
     ## Transit or not ?
     if raw_log[6][0] == '6':
