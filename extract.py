@@ -26,9 +26,57 @@ import mplleaflet
 import argparse
 import json
 
-parser = argparse.ArgumentParser("mobib-extract")
-parser.add_argument("--dump", type=str, default=None, help="Dump the read raw data to this JSON file")
-parser.add_argument("--load", type=str, default=None, help="Read the raw data from a JSON file instead of the card")
+class Connection:
+    """Connection to a Mobib or other smartcard.
+
+    Attributes:
+        connection : connection to the card
+    Methods:
+        transmit : transmit a select command
+    """
+    def __init__(self, card_index=-1):
+        """Create connection to a connected card.
+
+        Args:
+            card_index (int, optional): If set, use card at this index. Else, use the first that works.
+        """
+        connected_readers = readers()
+        if len(connected_readers) == 0:
+            print("[!] No reader detected")
+            sys.exit(-1)
+        print("\033[92mSmartcard reader detected.\033[0m")
+        
+        connection = None
+        for i, reader in enumerate(connected_readers):
+            if card_index >= 0 and i != card_index: # select one, default (-1) is loop over all
+                continue
+            try:
+                print("Connecting to \033[4m{}\033[0m...".format(reader))
+                connection = reader.createConnection()
+                connection.connect()
+                break # if successful, use first one
+            except NoCardException as e:
+                print("[!] No card inserted ({})".format(e))
+                connection = None
+        
+        # Designated card or none of them
+        if connection is None:
+            sys.exit(-1)
+        self.connection = connection
+
+    def transmit(self, select_command_hex_string):
+        """Transmit a select command to the card and obtain response.
+
+        Args:
+            select_command_hex_string (str): hex string of bytes to send.
+
+        Returns:
+            (str, bytes, bytes): data return as hex string, status word 1, status word 2
+        """
+        select_command = toBytes(select_command_hex_string)
+        data, sw1, sw2 = self.connection.transmit(select_command)
+        return toHexString(data), sw1, sw2
+
 
 def hex_to_bin(h):
     """Hexadecimal to binary
@@ -163,9 +211,6 @@ def analyze_log(raw_log):
     """
     Analyze travel logs and returns readable data (station, date, time)
     """
-    # FIXME put the loop outside!
-    # FIXME check if original did not have some cleaner code/data structures
-    # FIXME clean up more of the conversions
     ## Card total validations counter
     hexa_cp_total_log = raw_log[17] + raw_log[18] + raw_log[19] + raw_log[20][0]
     r = hex_to_bin(hexa_cp_total_log)
@@ -323,25 +368,6 @@ def read_card():
     """
     raw_data = {}
 
-    connected_readers = readers()
-    if len(connected_readers) == 0:
-        print("[!] No reader detected")
-        sys.exit(-1)
-
-    no_card = 0
-    print("\033[92mSmartcard reader detected.\033[0m")
-    for reader in connected_readers:
-        try:
-            print("Connecting to \033[4m{}\033[0m...".format(reader))
-            connection = reader.createConnection()
-            connection.connect()
-        except NoCardException as e:
-            print("[!] No card inserted ({})".format(e))
-            no_card += 1
-
-    if no_card == len(connected_readers):
-        sys.exit(-1)
-
     # 0x00 class byte
     # 0xA4 select command
     # 0x04 P1
@@ -349,55 +375,21 @@ def read_card():
     # 0x0E Lc
     # 0x3154494341D056000191
     # 0x01 Le:q
-    #
-    s = "00 A4 04 00 0E 31 54 49 43 2E 49 43 41 D0 56 00 01 91 01"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
+    
+    connection = Connection()
 
-    s = "00 B2 01 3C 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    raw_data["envholder"] = toHexString(data)
+    connection.transmit("00 A4 04 00 0E 31 54 49 43 2E 49 43 41 D0 56 00 01 91 01")
 
-    s = "00 B2 01 CC 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    print(toHexString(data))
-    raw_data["counter"] = toHexString(data)
+    raw_data["envholder"] = connection.transmit("00 B2 01 3C 1D")[0]
+    raw_data["counter"] = connection.transmit("00 B2 01 CC 1D")[0]
 
-
-    raw_logs = []
-    # EvLog1
-    s = "00 B2 01 BC 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    raw_logs.append(toHexString(data))
-
-    # EvLog2
-    s = "00 B2 02 BC 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    raw_logs.append(toHexString(data))
-
-    # EvLog3
-    s = "00 B2 03 BC 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    raw_logs.append(toHexString(data))
-    raw_data["logs"] = raw_logs
-
-    s = "00 A4 04 00 0B A0 00 00 02 91 D0 56 00 01 90 01"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    s = "00 B2 01 E4 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    raw_data["holder1"] = toHexString(data)
-
-    s = "00 B2 02 E4 1D"
-    select_command = toBytes(s)
-    data, sw1, sw2 = connection.transmit(select_command)
-    raw_data["holder2"] = toHexString(data)
+    # EvLog1, EvLog2, EvLog3
+    raw_data["logs"] = [connection.transmit(f"00 B2 0{i} BC 1D")[0] for i in [1,2,3]]
+    
+    connection.transmit("00 A4 04 00 0B A0 00 00 02 91 D0 56 00 01 90 01")
+    
+    raw_data["holder1"] = connection.transmit("00 B2 01 E4 1D")[0]
+    raw_data["holder2"] = connection.transmit("00 B2 02 E4 1D")[0]
 
     return raw_data
 
@@ -438,6 +430,9 @@ def main(args):
     analyze_logs(raw_data["logs"])
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser("mobib-extract")
+    parser.add_argument("--dump", type=str, default=None, help="Dump the read raw data to this JSON file")
+    parser.add_argument("--load", type=str, default=None, help="Read the raw data from a JSON file instead of the card")
     args = parser.parse_args()
     if args.dump is not None:
         dump = Path(args.dump)
