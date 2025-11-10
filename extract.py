@@ -168,196 +168,167 @@ def analyze_counter(raw_counter):
     print("\033[1mRemaining travels:\033[0m {}".format(c))
 
 
-def analyze_logs(raw_logs):
+def analyze_log(raw_log):
     """
     Analyze travel logs and returns readable data (station, date, time)
     """
+    # FIXME put the loop outside!
+    # FIXME check if original did not have some cleaner code/data structures
+    # FIXME clean up more of the conversions
     ## Card total validations counter
-    hexa_cp_total_log = ['', '', '']
-    cp_total_log = ['', '', '']
-    for i in range(3):
-        hexa_cp_total_log[i] = raw_logs[i][17] + raw_logs[i][18] +\
-            raw_logs[i][19] + raw_logs[i][20][0]
-    for i in range(3):
-        r = hex_to_bin(hexa_cp_total_log[i])
-        cp_total_log[i] = bin_to_number(r[3:len(r)-2])
+    hexa_cp_total_log = raw_log[17] + raw_log[18] + raw_log[19] + raw_log[20][0]
+    r = hex_to_bin(hexa_cp_total_log)
+    cp_total_log = bin_to_number(r[3:len(r)-2])
+
     ## Travel connection counter
-    hexa_cp_corresp_log = ['', '', '']
-    cp_corresp_log = ['', '', '']
-    for i in range(3):
-        hexa_cp_corresp_log[i] = raw_logs[i][20] + raw_logs[i][21] +\
-            raw_logs[i][22] + raw_logs[i][23][0]
-    for i in range(3):
-        r = hex_to_bin(hexa_cp_corresp_log[i])
-        cp_corresp_log[i] = bin_to_number(r[3:len(r)-2])
+    hexa_cp_corresp_log = raw_log[20] + raw_log[21] + raw_log[22] + raw_log[23][0]
+    r = hex_to_bin(hexa_cp_corresp_log)
+    cp_corresp_log = bin_to_number(r[3:len(r)-2])
 
     ## Card validation date
-    hexa_date_valid = ['', '', '']
-    date_valid = ['', '', '']
-    for i in range(3):
-        hexa_date_valid[i] = raw_logs[i][0][1] + raw_logs[i][1] +\
-            raw_logs[i][2][0]
-    for i in range(3):
-        tmp_datev_bin = hex_to_bin(hexa_date_valid[i])
-        date_valid[i] = find_date(
-            int(
-                bin_to_number(
-                    tmp_datev_bin[2:len(tmp_datev_bin)]
-                )
+    hexa_date_valid = raw_log[0][1] + raw_log[1] + raw_log[2][0]
+
+    tmp_datev_bin = hex_to_bin(hexa_date_valid)
+    date_valid = find_date(
+        int(
+            bin_to_number(
+                tmp_datev_bin[2:len(tmp_datev_bin)]
             )
         )
+    )
 
     ## Card validation date of the first transit travel
-    hexa_date_transit = ['', '', '']
-    date_transit = ['', '', '']
-    for i in range(3):
-        hexa_date_transit[i] = raw_logs[i][23] + raw_logs[i][24]
-    for i in range(3):
-        tmp_datet_bin = hex_to_bin(hexa_date_transit[i])
-        date_transit[i] = find_date(int(bin_to_number(tmp_datet_bin[2:len(tmp_datet_bin)])))
+    hexa_date_transit = raw_log[23] + raw_log[24]
+    tmp_datet_bin = hex_to_bin(hexa_date_transit)
+    date_transit = find_date(int(bin_to_number(tmp_datet_bin[2:len(tmp_datet_bin)])))
 
     ## Card validation hour
-    hexa_heure_valid = ['', '', '']
-    heure_valid = ['', '', '']
-    for i in range(3):
-        hexa_heure_valid[i] = raw_logs[i][2][1] + raw_logs[i][3]
-    for i in range(3):
-        tmp_heurev_bin = hex_to_bin(hexa_heure_valid[i])
-        heure_valid[i] = find_hour(int(bin_to_number(tmp_heurev_bin[0:len(tmp_heurev_bin)-1])))
+    hexa_heure_valid = raw_log[2][1] + raw_log[3]
+
+    tmp_heurev_bin = hex_to_bin(hexa_heure_valid)
+    heure_valid = find_hour(int(bin_to_number(tmp_heurev_bin[0:len(tmp_heurev_bin)-1])))
 
     ## Card validation hour of the first transit travel
-    hexa_heure_transit = ['', '', '']
-    heure_transit = ['', '', '']
-    for i in range(3):
-        hexa_heure_transit[i] = raw_logs[i][25] + raw_logs[i][26][0]
-    for i in range(3):
-        tmp_heuret_bin = hex_to_bin(hexa_heure_transit[i])
-        heure_transit[i] = find_hour(int(bin_to_number(tmp_heuret_bin[0:len(tmp_heuret_bin)-1])))
+    hexa_heure_transit = raw_log[25] + raw_log[26][0]
+    tmp_heuret_bin = hex_to_bin(hexa_heure_transit)
+    heure_transit = find_hour(int(bin_to_number(tmp_heuret_bin[0:len(tmp_heuret_bin)-1])))
 
     ## Transit or not ?
-    transit = ['', '', '']
-    for i in range(3):
-        if raw_logs[i][6][0] == '6':
-            transit[i] = "YES"
-        else:
-            transit[i] = "NO"
+    if raw_log[6][0] == '6':
+        transit = "YES"
+    else:
+        transit = "NO"
 
     ## Number of persons travelling
-    nb_persons = ['', '', '']
-    for i in range(3):
-        bin_nb_persons = hex_to_bin(raw_logs[i][6][1] + raw_logs[i][7][0])[0:5]
-        nb_persons[i] = bin_to_number(bin_nb_persons)
+    bin_nb_persons = hex_to_bin(raw_log[6][1] + raw_log[7][0])[0:5]
+    nb_persons = bin_to_number(bin_nb_persons)
 
     ## String Logs
-    string_logs = ['', '', '']
-    for i in range(3):
-        tmp_hexa = ''
-        for j in range(29):
-            tmp_hexa = tmp_hexa + raw_logs[i][j]
-        string_logs[i] = hex_to_bin(tmp_hexa)
+    string_log = hex_to_bin(''.join(raw_log[:29]))
 
     ## Station
-    type_transport = ['', '', '']
-    ligne = ['', '', '']
-    station = ['', '', '']
-    direction = ['', '', '']
-    coordx = ['', '', '']
-    coordy = ['', '', '']
-    for i in range(3):
-        # if the transport is a metro
-        if string_logs[i][99:104] == '00000':
-            if date_valid[i] == "-":
-                type_transport[i] = "-"
-                ligne[i] = "0"
-                station[i] = "No info"
-                direction[i] = "No info"
-                coordx[i] = "-"
-                coordy[i] = "-"
-            else:
-                type_transport[i] = 'Metro'
-                reader = csv.reader(open("Database/metro_new.csv", "r"))
-                for r in reader:
-                    if string_logs[i][104:110] == r[1] and\
-                        string_logs[i][110:114] == r[2] and\
-                        string_logs[i][114:121] == r[3]:
-                        ligne[i] = r[4]
-                        station[i] = r[5]
-                        direction[i] = "No info"
-                        coordx[i] = r[6]
-                        coordy[i] = r[7]
-        # if the transport is a premetro
-        elif string_logs[i][99:104] == '00111':
-            type_transport[i] = 'Premetro'
+    type_transport, ligne, station, direction = '', '', '', ''
+    coordx, coordy = '', ''
+
+    # if the transport is a metro
+    if string_log[99:104] == '00000':
+        if date_valid == "-":
+            type_transport = "-"
+            ligne = "0"
+            station = "No info"
+            direction = "No info"
+            coordx = "-"
+            coordy = "-"
+        else:
+            type_transport = 'Metro'
             reader = csv.reader(open("Database/metro_new.csv", "r"))
             for r in reader:
-                if string_logs[i][104:110] == r[1] and\
-                    string_logs[i][110:114] == r[2] and\
-                    string_logs[i][114:121] == r[3]:
-                    ligne[i] = r[4]
-                    station[i] = r[5]
-                    direction[i] = "No info"
-                    coordx[i] = r[6]
-                    coordy[i] = r[7]
-        # if the transport is a tramway
-        elif string_logs[i][99:104] == '10110':
-            type_transport[i] = 'Tramway'
-            ligne[i] = "No info"
-            station[i] = "No info"
-            direction[i] = "No info"
-            coordx[i] = "-"
-            coordy[i] = "-"
-        # if the transport is a bus
-        elif string_logs[i][99:104] == '01111':
-            type_transport[i] = 'Bus'
-            reader = csv.reader(open("Database/bus_new.csv", "r"))
-            for r in reader:
-                if bin_to_number(string_logs[i][92:99]) == r[0] and\
-                    bin_to_number(string_logs[i][71:83]) == r[5]:
-                    ligne[i] = r[0]
-                    station[i] = r[4]
-                    direction[i] = r[1]
-                    coordx[i] = r[2]
-                    coordy[i] = r[3]
-                    break
+                if string_log[104:110] == r[1] and\
+                    string_log[110:114] == r[2] and\
+                    string_log[114:121] == r[3]:
+                    ligne = r[4]
+                    station = r[5]
+                    direction = "No info"
+                    coordx = r[6]
+                    coordy = r[7]
+    # if the transport is a premetro
+    elif string_log[99:104] == '00111':
+        type_transport = 'Premetro'
+        reader = csv.reader(open("Database/metro_new.csv", "r"))
+        for r in reader:
+            if string_log[104:110] == r[1] and\
+                string_log[110:114] == r[2] and\
+                string_log[114:121] == r[3]:
+                ligne = r[4]
+                station = r[5]
+                direction = "No info"
+                coordx = r[6]
+                coordy = r[7]
+    # if the transport is a tramway
+    elif string_log[99:104] == '10110':
+        type_transport = 'Tramway'
+        ligne = "No info"
+        station = "No info"
+        direction = "No info"
+        coordx = "-"
+        coordy = "-"
+    # if the transport is a bus
+    elif string_log[99:104] == '01111':
+        type_transport = 'Bus'
+        reader = csv.reader(open("Database/bus_new.csv", "r"))
+        for r in reader:
+            if bin_to_number(string_log[92:99]) == r[0] and\
+                bin_to_number(string_log[71:83]) == r[5]:
+                ligne = r[0]
+                station = r[4]
+                direction = r[1]
+                coordx = r[2]
+                coordy = r[3]
+                break
+            else:
+                if bin_to_number(string_log[92:99]) == '0':
+                    ligne = "Unknown"
                 else:
-                    if bin_to_number(string_logs[i][92:99]) == '0':
-                        ligne[i] = "Unknown"
-                    else:
-                        ligne[i] = bin_to_number(string_logs[i][92:99])
-                        station[i] = "No info"
-                        direction[i] = "No info"
-                        coordx[i] = "-"
-                        coordy[i] = "-"
-        # if the transport is unknown
-        else:
-            type_transport[i] = "Unknown"
-            ligne[i] = "No info"
-            station[i] = "No info"
-            direction[i] = "No info"
-            coordx[i] = "-"
-            coordy[i] = "-"
+                    ligne = bin_to_number(string_log[92:99])
+                    station = "No info"
+                    direction = "No info"
+                    coordx = "-"
+                    coordy = "-"
+    # if the transport is unknown
+    else:
+        type_transport = "Unknown"
+        ligne = "No info"
+        station = "No info"
+        direction = "No info"
+        coordx = "-"
+        coordy = "-"
+    
+    # Print output
+    print("{}\t\t{}\t{}\t\t{}\t{}:{}\t\t{};{}".format(
+        type_transport,
+        ligne,
+        station,
+        date_valid,
+        int(heure_valid[0]),
+        heure_valid[1],
+        coordx,
+        coordy
+        ))
+    return (coordx, coordy)
 
+def analyze_logs(raw_logs):
     print("\n\033[1mLast known locations:\033[0m\n")
     print("\033[4mTransport\tLine\tStation\t\t\tTime\t\t\t\tCoords\033[0m")
-    for i in range(0, 3):
-        print("{}\t\t{}\t{}\t\t{}\t{}:{}\t\t{};{}".format(
-            type_transport[i],
-            ligne[i],
-            station[i],
-            date_valid[i],
-            int(heure_valid[i][0]),
-            heure_valid[i][1],
-            coordx[i],
-            coordy[i]
-            ))
-    for i in range(0, 3):
-        if coordx[i] != "-":
-            plt.plot(float(coordy[i]), float(coordx[i]), 'rs')
-            plt.plot(float(coordy[i]), float(coordx[i]), 'b')
-    #mplleaflet.show()
+    coords = [analyze_log(log) for log in raw_logs]
+    
+    for _cx, _cy in coords:
+        if _cx != "-":
+            plt.plot(float(_cy), float(_cy), 'rs')
+            plt.plot(float(_cy), float(_cx), 'b')
+    mplleaflet.show()
 
 def read_card():
-    """Read salient raw data from the Mobib card in any connected card read.
+    """Read salient raw data from the Mobib card in any connected card reader.
     """
     raw_data = {}
 
