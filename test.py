@@ -10,19 +10,17 @@ connection = Connection(card_index=0)
 
 
 # select ICC
-select_command = "80 A4 08 00 04 3F 00 00 02"
-data,sw1,sw2 = connection.transmit(select_command)
+data,sw1,sw2 = connection.transmit("80 A4 08 00 04 3F 00 00 02")
 if sw2 == 0x19:
-    read_1record = "80 B2 01 04 1D" #intermediate if 0X612A
-    data,sw1,sw2 = connection.transmit(read_1record)
+    # intermediate if 0X612A
+    data,sw1,sw2 = connection.transmit("80 B2 01 04 1D")
     print("ICC:", data)
 else:
     print ("Error in ICC select")
 
 
 # select holder
-s = "80 A4 08 00 04 3F 00 3F 1C"
-data,sw1,sw2 = connection.transmit(s)
+data,sw1,sw2 = connection.transmit("80 A4 08 00 04 3F 00 3F 1C")
 print("RAPDU: %s %02x %02x" % (data, sw1,sw2))
 if sw2 == 0x19:
     read_1record = "80 B2 01 04 1D"
@@ -78,20 +76,20 @@ print("CAPDU:", s)
 data,sw1,sw2 = connection.transmit(s)
 print("RAPDU: %s %02x %02x" % (data, sw1,sw2))
 
-if sw1 == 0x90 and sw2 == 0x00:
-    read_1record = "00 C0 00 00 00" #intermediate if 0X9000
+if sw1 == 0x90 and sw2 == 0x00: # 0x0900 means "success"
+    read_1record = "00 C0 00 00 00" #intermediate if 0x9000
     print("CAPDU:", read_1record)
     data,sw1,sw2 = connection.transmit(read_1record)
     print("RAPDU:     %s %02x %02x" % (data, sw1, sw2))
     if sw1 == 0x6c and sw2 == 0x27:
-        read_2record = "00 C0 00 00 27" #intermediate if 0X6C27 RAPDU
+        read_2record = "00 C0 00 00 27" #intermediate if 0x6C27 RAPDU
         print("CAPDU:", read_2record)
         data,sw1,sw2=connection.transmit(read_2record)
         print("UNKNOWN:    ", data)
     else:
         print("Error in 0X6C27 read")
 else:
-    print ("Error in 0X900 read")
+    print ("Error in 0X9000 read")
 
 
 s = "00 B2 01 E4 1D"
