@@ -209,7 +209,8 @@ def analyze_counter(raw_counter):
 
 def analyze_log(raw_log):
     """
-    Analyze travel logs and returns readable data (station, date, time)
+    Analyze travel logs and returns readable data (line, station, date, time)
+    plus coordinates looked up from open data.
     """
     ## Card total validations counter
     hexa_cp_total_log = raw_log[17] + raw_log[18] + raw_log[19] + raw_log[20][0]
@@ -259,85 +260,60 @@ def analyze_log(raw_log):
     bin_nb_persons = hex_to_bin(raw_log[6][1] + raw_log[7][0])[0:5]
     nb_persons = bin_to_number(bin_nb_persons)
 
-    ## String Logs
+    ## Bit string logs
     string_log = hex_to_bin(''.join(raw_log[:29]))
 
+    ## Transport type
+    type_transport = 'Unknown'
+    match string_log[99:104]:
+        case '00000':
+            if date_valid == '-':
+                type_transport = '-'
+            else:
+                type_transport = 'Metro'
+        case '00111':
+            type_transport = 'Premetro'
+        case '10110':
+            type_transport = 'Tramway'
+        case '01111':
+            type_transport = 'Bus'
+    
     ## Station
-    type_transport, ligne, station, direction = '', '', '', ''
-    coordx, coordy = '', ''
+    # defaults
+    ligne, station, direction = '-', 'No info', 'No info'
+    coordx, coordy = '-', '-'
+    # For metro/premetro
+    zone_id, subzone_id, station_id = string_log[104:110], string_log[110:114], string_log[114:121]
+    # For bus and tram
+    # matches some. was 71:83, 70:83. Also line number, but might go to [(80,99), (114,119), (137,160), (144,160), (180,188)]
+    line_number, stop_number = bin_to_number(string_log[92:99]), bin_to_number(string_log[67:83])
+    # TODO stops with appended letters?
 
-    # if the transport is a metro
-    if string_log[99:104] == '00000':
-        if date_valid == "-":
-            type_transport = "-"
-            ligne = "0"
-            station = "No info"
-            direction = "No info"
-            coordx = "-"
-            coordy = "-"
-        else:
-            type_transport = 'Metro'
+    # if the transport is a metro or premetro
+    match type_transport:
+        case 'Metro' | 'Premetro':
             reader = csv.reader(open("Database/metro_new.csv", "r"))
             for r in reader:
-                if string_log[104:110] == r[1] and\
-                    string_log[110:114] == r[2] and\
-                    string_log[114:121] == r[3]:
+                if zone_id == r[1] and subzone_id == r[2] and station_id == r[3]:
                     ligne = r[4]
                     station = r[5]
                     direction = "No info"
                     coordx = r[6]
                     coordy = r[7]
-    # if the transport is a premetro
-    elif string_log[99:104] == '00111':
-        type_transport = 'Premetro'
-        reader = csv.reader(open("Database/metro_new.csv", "r"))
-        for r in reader:
-            if string_log[104:110] == r[1] and\
-                string_log[110:114] == r[2] and\
-                string_log[114:121] == r[3]:
-                ligne = r[4]
-                station = r[5]
-                direction = "No info"
-                coordx = r[6]
-                coordy = r[7]
-    # if the transport is a tramway
-    elif string_log[99:104] == '10110':
-        type_transport = 'Tramway'
-        ligne = "No info"
-        station = "No info"
-        direction = "No info"
-        coordx = "-"
-        coordy = "-"
-    # if the transport is a bus
-    elif string_log[99:104] == '01111':
-        type_transport = 'Bus'
-        reader = csv.reader(open("Database/bus_new.csv", "r"))
-        for r in reader:
-            if bin_to_number(string_log[92:99]) == r[0] and\
-                bin_to_number(string_log[71:83]) == r[5]:
-                ligne = r[0]
-                station = r[4]
-                direction = r[1]
-                coordx = r[2]
-                coordy = r[3]
-                break
-            else:
-                if bin_to_number(string_log[92:99]) == '0':
-                    ligne = "Unknown"
-                else:
-                    ligne = bin_to_number(string_log[92:99])
-                    station = "No info"
-                    direction = "No info"
-                    coordx = "-"
-                    coordy = "-"
-    # if the transport is unknown
-    else:
-        type_transport = "Unknown"
-        ligne = "No info"
-        station = "No info"
-        direction = "No info"
-        coordx = "-"
-        coordy = "-"
+        # if the transport is a tram or bus
+        case 'Tramway' | 'Bus':
+            # defaults if we don't find it in the CSV
+            ligne = "Unknown" if line_number == '0' else line_number
+            station = stop_number
+            reader = csv.reader(open("Database/bus_new.csv", "r")) # TODO if 0 can skip the CSV...
+            for r in reader:
+                if line_number == r[0] and stop_number == r[5]: # FIXME some stop IDs in GTFS have appended letters - how do these appear on Mobib, if at all?
+                    ligne = r[0]
+                    station = r[4] # station name
+                    direction = r[1] # most stops come in pairs => determines direction
+                    coordx = r[2]
+                    coordy = r[3]
+                    break
     
     # Print output
     print("{}\t\t{}\t{}\t\t{}\t{}:{}\t\t{};{}".format(

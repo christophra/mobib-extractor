@@ -129,3 +129,10 @@ Here is the list of hex encoded APDUs. They need to be sent in that order (at le
 | subsequent read unknown     | `00 C0 00 00 27`                                           |
 | read holder record 1        | `00 B2 01 E4 1D`                                           |
 | read holder record 2        | `00 B2 02 E4 1D`                                           |
+
+## Event logs
+
+The card contains 3 or 4 "event logs" from checking in with the card (see above).
+
+In 2025, the station number for bus journeys can now be found (tentatively) between bits 67:83 of this log. 
+Tram journeys have the same scheme.
