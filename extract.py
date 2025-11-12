@@ -21,8 +21,8 @@ import csv
 from smartcard.System import readers
 from smartcard.util import toHexString, toBytes
 from smartcard.Exceptions import NoCardException
-import matplotlib.pyplot as plt
-import mplleaflet
+import folium
+import webbrowser
 import argparse
 import json
 
@@ -327,9 +327,29 @@ def analyze_log(raw_log):
     return (coordx, coordy)
 
 def analyze_logs(raw_logs):
+    # Print table from entries
     print("\n\033[1mLast known locations:\033[0m\n")
     print("\033[4mTransport\tLine\tStation\t\t\tTime\t\t\t\tCoords\033[0m")
-    coords = [analyze_log(log) for log in raw_logs]
+    coords_str = [analyze_log(log) for log in raw_logs]
+
+    # Extract coords where available
+    coords = []
+    for cx, cy in coords_str:
+        if cx != '-':
+            coords.append((float(cx), float(cy)))
+
+    return coords
+    
+def map_logs(coords):
+    # Put them onto a Leaflet.js map
+    m = folium.Map(tiles='OpenStreetMap')
+    for coord in coords:
+        folium.Marker(location=coord).add_to(m)
+    # Center
+    m.fit_bounds([[fun(c[i] for c in coords) for i in [0,1]] for fun in [min, max]])
+    # Show
+    m.save("_map.html")
+    webbrowser.open_new_tab("_map.html")
 
 def read_card():
     """Read salient raw data from the Mobib card in any connected card reader.
@@ -395,12 +415,16 @@ def main(args):
     if len(raw_data["envholder"]) > 1:
         analyze_envholder(raw_data["envholder"])
     analyze_counter(raw_data["counter"])
-    analyze_logs(raw_data["logs"])
+    coords = analyze_logs(raw_data["logs"])
+    if args.map:
+        map_logs(coords)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("mobib-extract")
     parser.add_argument("--dump", type=str, default=None, help="Dump the read raw data to this JSON file")
     parser.add_argument("--load", type=str, default=None, help="Read the raw data from a JSON file instead of the card")
+    parser.add_argument("--map", action='store_true', help="Show a map where you've been")
     args = parser.parse_args()
     if args.dump is not None:
         dump = Path(args.dump)
