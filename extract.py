@@ -305,18 +305,17 @@ def analyze_log(raw_log):
             # defaults if we don't find it in the CSV
             ligne = "Unknown" if line_number == '0' else line_number
             station = stop_number
-            reader = csv.reader(open("Database/bus_new.csv", "r")) # TODO if 0 can skip the CSV...
+            reader = csv.reader(open("Database/stops.txt", "r")) # TODO if 0 can skip the CSV...
             for r in reader:
-                if line_number == r[0] and stop_number == r[5]: # FIXME some stop IDs in GTFS have appended letters - how do these appear on Mobib, if at all?
-                    ligne = r[0]
-                    station = r[4] # station name
-                    direction = r[1] # most stops come in pairs => determines direction
-                    coordx = r[2]
-                    coordy = r[3]
+                if stop_number == ''.join(filter(str.isdigit, r[0])): # FIXME some stop IDs in GTFS have appended letters - how do these appear on Mobib, if at all?
+                    station = r[2] # station name
+                    #direction = r[1] # most stops come in pairs => determines direction - but haven't yet compiled this for updated list
+                    coordx = r[4]
+                    coordy = r[5]
                     break
     
     # Print output
-    print("{}\t\t{}\t{}\t\t{}\t{}:{}\t\t{};{}".format(
+    print("{}\t\t{}\t{:15s}\t\t{} {:02d}:{}\t\t{};{}".format(
         type_transport,
         ligne,
         station,
