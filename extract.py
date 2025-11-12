@@ -178,8 +178,7 @@ def analyze_envholder(raw_envholder):
     Get zip code out of holder data.
     """
     # Zip code
-    # TODO: zip code location seems to have changed. I think it is there but I
-    # need another card to confirm my hypothesis.
+    # TODO: zip code location seems to have changed. Seems to work for 2 cards so far.
     hexa_zipcode = raw_envholder[22] + raw_envholder[23] + raw_envholder[24][0]
     zipcode = bin_to_number(hex_to_bin(hexa_zipcode)[4:17])
     print("\033[1mZip code:\033[0m {}".format(zipcode))
@@ -331,12 +330,6 @@ def analyze_logs(raw_logs):
     print("\n\033[1mLast known locations:\033[0m\n")
     print("\033[4mTransport\tLine\tStation\t\t\tTime\t\t\t\tCoords\033[0m")
     coords = [analyze_log(log) for log in raw_logs]
-    
-    for _cx, _cy in coords:
-        if _cx != "-":
-            plt.plot(float(_cy), float(_cy), 'rs')
-            plt.plot(float(_cy), float(_cx), 'b')
-    mplleaflet.show()
 
 def read_card():
     """Read salient raw data from the Mobib card in any connected card reader.
@@ -358,8 +351,8 @@ def read_card():
     raw_data["envholder"] = connection.transmit("00 B2 01 3C 1D")[0]
     raw_data["counter"] = connection.transmit("00 B2 01 CC 1D")[0]
 
-    # EvLog1, EvLog2, EvLog3
-    raw_data["logs"] = [connection.transmit(f"00 B2 0{i} BC 1D")[0] for i in [1,2,3]]
+    # EvLog1, EvLog2, EvLog3, EvLog4 (new)
+    raw_data["logs"] = [connection.transmit(f"00 B2 0{i} BC 1D")[0] for i in [1,2,3,4]]
     
     connection.transmit("00 A4 04 00 0B A0 00 00 02 91 D0 56 00 01 90 01")
     
