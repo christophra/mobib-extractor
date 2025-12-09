@@ -137,11 +137,9 @@ def analyze_holder(raw_holder1, raw_holder2):
         - bytes 2-11 : the card number
         - bytes 12-20 : unknown data
         - bytes 21-24 : the birthday
-        - bytes 24-28 : the begining of the name
+        - bytes 25-28 : title/gender + the begining of the name
         - raw_holder2 has the end of the name
     """
-
-    ## Name
 
     ## Card number
     hexa_card = ''.join(raw_holder1[2:13])[:-1]
@@ -149,6 +147,7 @@ def analyze_holder(raw_holder1, raw_holder2):
     num_card = bin_to_number_dec(hex_to_bin(hexa_card), 2) # offset = 2
     print("\033[1mCard number:\033[0m {}".format(num_card))
 
+    ## Title
     hexa_type = raw_holder1[25][0]
     bin_type = hex_to_bin(hexa_type)[0:2]
     if bin_type == '01':
@@ -156,12 +155,13 @@ def analyze_holder(raw_holder1, raw_holder2):
     elif bin_type == '10':
         gender = 'Mrs'
     else:
-        gender = None
+        gender = bin_type
 
+    ## Name
     if gender is not None:
-        hexa_name = ''.join(raw_holder1[25:29])[1:] + ''.join(raw_holder2)
+        hexa_name = ''.join(raw_holder1[25:29] + raw_holder2)
         bin_name = hex_to_bin(hexa_name)
-        name = bin_to_alphabet(bin_name, 1) # offset = 1
+        name = bin_to_alphabet(bin_name, 5) # offset = 1
 
         print("\033[1mName:\033[0m {} {}".format(gender, name))
 
@@ -179,7 +179,8 @@ def analyze_envholder(raw_envholder):
     """
     # Zip code
     # TODO: zip code location seems to have changed. Seems to work for 2 cards so far.
-    hexa_zipcode = raw_envholder[22] + raw_envholder[23] + raw_envholder[24][0]
+    hexa_zipcode = raw_envholder[22] + raw_envholder[23] + raw_envholder[24]
+    # TODO figure out what the first 4 bits are, and if the last 7 are ever not 0
     zipcode = bin_to_number(hex_to_bin(hexa_zipcode)[4:17])
     print("\033[1mZip code:\033[0m {}".format(zipcode))
 
@@ -351,7 +352,7 @@ def map_logs(coords):
     m.save("_map.html")
     webbrowser.open_new_tab("_map.html")
 
-def read_card():
+def read_card(get_logs=True):
     """Read salient raw data from the Mobib card in any connected card reader.
     """
     raw_data = {}
@@ -372,7 +373,10 @@ def read_card():
     raw_data["counter"] = connection.transmit("00 B2 01 CC 1D")[0]
 
     # EvLog1, EvLog2, EvLog3, EvLog4 (new)
-    raw_data["logs"] = [connection.transmit(f"00 B2 0{i} BC 1D")[0] for i in [1,2,3,4]]
+    if get_logs:
+        raw_data["logs"] = [connection.transmit(f"00 B2 0{i} BC 1D")[0] for i in [1,2,3,4]]
+    else:
+        raw_data["logs"] = []
     
     connection.transmit("00 A4 04 00 0B A0 00 00 02 91 D0 56 00 01 90 01")
     
@@ -396,9 +400,14 @@ def main(args):
     """
     I'm the main function :o
     """
+    # Make sure output has a place to be written
+    if args.dump is not None:
+        dump = Path(args.dump)
+        dump.parent.mkdir(exist_ok=True)
+    
     # Handle input/output: from card, from dump, to dump.
     if args.load is None:
-        raw_data = read_card()
+        raw_data = read_card(get_logs=not args.private)
         if args.dump is not None:
             with open(args.dump, "w") as f:
                 json.dump(raw_data, f, indent=4)
@@ -415,9 +424,10 @@ def main(args):
     if len(raw_data["envholder"]) > 1:
         analyze_envholder(raw_data["envholder"])
     analyze_counter(raw_data["counter"])
-    coords = analyze_logs(raw_data["logs"])
-    if args.map:
-        map_logs(coords)
+    if not args.private:
+        coords = analyze_logs(raw_data["logs"])
+        if args.map:
+            map_logs(coords)
 
 
 if __name__ == "__main__":
@@ -425,8 +435,6 @@ if __name__ == "__main__":
     parser.add_argument("--dump", type=str, default=None, help="Dump the read raw data to this JSON file")
     parser.add_argument("--load", type=str, default=None, help="Read the raw data from a JSON file instead of the card")
     parser.add_argument("--map", action='store_true', help="Show a map where you've been")
+    parser.add_argument("--private", action='store_true', help="Don't analyze or extract logs at all")
     args = parser.parse_args()
-    if args.dump is not None:
-        dump = Path(args.dump)
-        dump.parent.mkdir(exist_ok=True)
     main(args)
