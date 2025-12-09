@@ -136,3 +136,9 @@ The card contains 3 or 4 "event logs" from checking in with the card (see above)
 
 In 2025, the station number for bus journeys can now be found (tentatively) between bits 67:83 of this log. 
 Tram journeys have the same scheme.
+
+# Other useful tools
+
+- https://github.com/L1L1/cardpeek
+- https://github.com/calypsonet/cna-tool-card-analyzer-app
+- https://github.com/ABeaujet/CalypsoInspector
