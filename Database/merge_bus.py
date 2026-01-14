@@ -5,7 +5,7 @@ stops = []
 bus = []
 
 if __name__ == "__main__":
-    outfile = open("bus_new.csv", "wb")
+    outfile = open("bus_new.csv", "w")
     outfile.write('"Bus","Direction","coord_x","coord_y","Arret","Code"\n')
     with open("Bus.csv") as f:
         lines = csv.reader(f, delimiter=',', quotechar='"')
@@ -20,11 +20,11 @@ if __name__ == "__main__":
         found = False
         for stop in stops:
             if b[5] == stop[0]:
-                print "[+] Matched %s with %s " % (b[4], stop[2])
+                print("[+] Matched %s with %s " % (b[4], stop[2]))
                 found = True
                 outfile.write('"%s","%s","%s","%s","%s","%s"\n' % (b[0], b[1], stop[4].replace(" ", ""), stop[5].replace(" ", ""), b[4], b[5]))
         if not found:
-            print "[!] No match for %s" % (b[4])
+            print("[!] No match for %s" % (b[4]))
             outfile.write('"%s","%s","0.0","0.0","%s","%s"\n' % (b[0], b[1], b[4], b[5]))
 
 

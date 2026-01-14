@@ -1,4 +1,4 @@
-# MOBIB Card Reader - 2017 Edition
+# MOBIB Card Reader - 2025 Edition
 
 Read data stored on your MOBIB card (STIB/MIVB, SNCB/NMBS, TEC).
 
@@ -38,14 +38,12 @@ If you want to know about new APDUs and format, check the [documentation](Docume
 
 Two scripts are available at the moment:
 
-- extract.py that reads owner details and last three known locations
+- extract.py that reads owner details and last four known locations
 - test.py that emulates commands sent by the STIB plugin
 
 # Credits
 
 Initial research project was performed by Tania Marting <tania.martin@uclouvain.be> and Jean-Pierre Szikora <jean-pierre.Szikora@uclouvain.be> from UCL GIS. All credits goes to them for their amazing work with this :) 
-
-This repo is a fork of [qkaiser/mobib-extractor](https://github.com/qkaiser/mobib-extractor), hoping to continue keeping this usable in 2025.
 
 # Original License
 
